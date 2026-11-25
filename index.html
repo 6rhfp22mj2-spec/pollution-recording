@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POLLUTION RECORDING</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #050505;
+  color: #bdbdbd;
+  font-family: monospace;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.container {
+  width: 90%;
+  max-width: 430px;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.warning {
+  font-size: 10px;
+  letter-spacing: 5px;
+  color: #555;
+  margin-bottom: 50px;
+}
+
+h1 {
+  font-size: 23px;
+  font-weight: normal;
+  letter-spacing: 5px;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: #777;
+  letter-spacing: 3px;
+  margin-bottom: 50px;
+}
+
+.message {
+  font-size: 13px;
+  line-height: 2.5;
+  margin-bottom: 40px;
+}
+
+#timer {
+  font-size: 30px;
+  letter-spacing: 5px;
+  margin: 30px 0;
+}
+
+button {
+  background: none;
+  color: #aaa;
+  border: 1px solid #555;
+  padding: 18px 35px;
+  font-family: monospace;
+  letter-spacing: 3px;
+  cursor: pointer;
+}
+
+button:active {
+  background: #222;
+}
+
+#status {
+  font-size: 11px;
+  margin-top: 25px;
+  color: #666;
+}
+
+audio {
+  width: 100%;
+  margin-top: 35px;
+  filter: grayscale(1);
+}
+
+.footer {
+  margin-top: 80px;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #333;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="warning">
+    PLEASE DO NOT CLOSE THIS PAGE
+  </div>
+
+  <h1>POLLUTION</h1>
+
+  <div class="subtitle">
+    PERSONAL RECORDING SYSTEM
+  </div>
+
+  <div class="message">
+    対象のものにお話ください。<br>
+    最長5分録音出来ます。
+  </div>
+
+  <div id="timer">00:00</div>
+
+  <button id="recordButton">● RECORD</button>
+
+  <div id="status">
+    待機中
+  </div>
+
+  <audio id="audio" controls hidden></audio>
+
+  <div class="footer">
+    POLLUTION SYSTEM ver.1.03
+  </div>
+
+</div>
+
+<script>
+let recorder;
+let chunks = [];
+let seconds = 0;
+let interval;
+
+const button = document.getElementById("recordButton");
+const statusText = document.getElementById("status");
+const timer = document.getElementById("timer");
+const audio = document.getElementById("audio");
+
+button.onclick = async () => {
+
+  if (!recorder || recorder.state === "inactive") {
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true
+      });
+
+      chunks = [];
+
+      recorder = new MediaRecorder(stream);
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, {
+          type: "audio/webm"
+        });
+
+        audio.src = URL.createObjectURL(blob);
+        audio.hidden = false;
+
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+
+      seconds = 0;
+
+      button.textContent = "■ STOP";
+      statusText.textContent = "録音中";
+
+      interval = setInterval(() => {
+        seconds++;
+
+        const min = String(Math.floor(seconds / 60)).padStart(2, "0");
+        const sec = String(seconds % 60).padStart(2, "0");
+
+        timer.textContent = min + ":" + sec;
+
+        if (seconds >= 300) {
+          recorder.stop();
+          clearInterval(interval);
+          button.textContent = "● RECORD";
+          statusText.textContent = "録音終了";
+        }
+
+      }, 1000);
+
+    } catch (error) {
+      statusText.textContent = "マイクを使用できません";
+    }
+
+  } else {
+
+    recorder.stop();
+    clearInterval(interval);
+
+    button.textContent = "● RECORD";
+    statusText.textContent = "録音終了";
+
+  }
+};
+</script>
+
+</body>
+</html>
